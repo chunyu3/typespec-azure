@@ -37,6 +37,7 @@ import { rpcOperationRequestBodyRule } from "./rules/rpc-operation-request-body.
 import { spreadDiscriminatedModelRule } from "./rules/spread-discriminated-model.js";
 import { useStandardNames } from "./rules/use-standard-names.js";
 import { useStandardOperations } from "./rules/use-standard-operations.js";
+import { invalidPagingResultSchemaRule } from "./rules/invalid-paging-result-schema.js";
 
 const rules = [
   apiVersionRule,
@@ -77,6 +78,7 @@ const rules = [
   noPrivateUsage,
   noLegacyUsage,
   noQueryExplodeRule,
+  invalidPagingResultSchemaRule,
 ];
 
 export const $linter = defineLinter({
