@@ -25,6 +25,31 @@
   "preview": true,
   "private": true,
   "type": "module",
+  "contributes": {
+    "commands": [
+      {
+        "command": "typespec.azure.emitCode",
+        "title": "Emit from TypeSpec Azure",
+        "category": "TypeSpec-azure"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "typespec.azure.emitCode",
+          "when": "explorerResourceIsFolder || resourceLangId == typespec || resourceFilename == 'tspconfig.yaml'",
+          "group": "typespec-azure@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "typespec.azure.emitCode",
+          "when": "resourceLangId == typespec || resourceFilename == 'tspconfig.yaml'",
+          "group": "typespec-azure@1"
+        }
+      ]
+    }
+  },
   "scripts": {
     "compile": "pnpm check-types && tsx ./scripts/build.ts",
     "check-types": "tsc --noEmit",
