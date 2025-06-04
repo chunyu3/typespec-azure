@@ -21,29 +21,31 @@ export async function activate(context: vscode.ExtensionContext) {
     );
   }
 
-  await telemetryClient.doOperationWithTelemetry("start-extension", async (tel) => {});
-  /* emit command. */
-  /* reuse the emit command from typespec extension*/
-  context.subscriptions.push(
-    vscode.commands.registerCommand(CommandName.EmitCode, async (uri: vscode.Uri) => {
-      await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Window,
-          title: "Emit from TypeSpec Azure...",
-          cancellable: false,
-        },
-        async () => {
-          // await emitCode(uri);
-          await telemetryClient.doOperationWithTelemetry(
-            "emit-code",
-            async (tel: any): Promise<ResultCode> => {
-              return await emitCode(uri, tel);
-            },
-          );
-        },
-      );
-    }),
-  );
+  telemetryClient.Initialize();
+
+  await telemetryClient.doOperationWithTelemetry("start-extension", async () => {
+    /* emit command. */
+    context.subscriptions.push(
+      vscode.commands.registerCommand(CommandName.EmitCode, async (uri: vscode.Uri) => {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Window,
+            title: "Emit from TypeSpec Azure...",
+            cancellable: false,
+          },
+          async () => {
+            // await emitCode(uri);
+            await telemetryClient.doOperationWithTelemetry(
+              "emit-code",
+              async (tel: any): Promise<ResultCode> => {
+                return await emitCode(uri, tel);
+              },
+            );
+          },
+        );
+      }),
+    );
+  });
 }
 
 // This method is called when your extension is deactivated
