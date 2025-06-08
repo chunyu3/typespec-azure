@@ -1,12 +1,10 @@
 import { readFile } from "fs/promises";
 import path, { dirname } from "path";
 import * as vscode from "vscode";
-import { isFile, normalizeSlashes } from "./utils.js";
 import { ClientFileName, MainFileName } from "./constant.js";
+import { isFile, normalizeSlashes } from "./utils.js";
 
-export async function getEntrypointTspFile(
-  tspPath: string
-): Promise<string | undefined> {
+export async function getEntrypointTspFile(tspPath: string): Promise<string | undefined> {
   const isFilePath = await isFile(tspPath);
   let baseDir = isFilePath ? dirname(tspPath) : tspPath;
 
@@ -21,17 +19,12 @@ export async function getEntrypointTspFile(
         if (typeof tspMain === "string") {
           const tspMainFile = path.resolve(baseDir, tspMain);
           if (await isFile(tspMainFile)) {
-            console.debug(
-              `tspMain file ${tspMainFile} selected as entrypoint file.`
-            );
+            console.debug(`tspMain file ${tspMainFile} selected as entrypoint file.`);
             return tspMainFile;
           }
         }
       } catch (error) {
-        console.error(
-          `An error occurred while reading the package.json file ${pkgPath}`,
-          [error]
-        );
+        console.error(`An error occurred while reading the package.json file ${pkgPath}`, [error]);
       }
     }
 
@@ -55,26 +48,15 @@ export async function getEntrypointTspFile(
 }
 
 export async function TraverseMainTspFileInWorkspace() {
-  const mainFiles = (
-    await vscode.workspace.findFiles(`**/${MainFileName}`, "**/node_modules/**")
-  )
-    .filter(
-      (uri) => uri.scheme === "file" && !uri.fsPath.includes("node_modules")
-    )
+  const mainFiles = (await vscode.workspace.findFiles(`**/${MainFileName}`, "**/node_modules/**"))
+    .filter((uri) => uri.scheme === "file" && !uri.fsPath.includes("node_modules"))
     .map((uri) => normalizeSlashes(uri.fsPath));
   const clientFiles = (
-    await vscode.workspace.findFiles(
-      `**/${ClientFileName}`,
-      "**/node_modules/**"
-    )
+    await vscode.workspace.findFiles(`**/${ClientFileName}`, "**/node_modules/**")
   )
-    .filter(
-      (uri) => uri.scheme === "file" && !uri.fsPath.includes("node_modules")
-    )
+    .filter((uri) => uri.scheme === "file" && !uri.fsPath.includes("node_modules"))
     .map((uri) => normalizeSlashes(uri.fsPath));
-  const foldersContainsClientFiles = clientFiles.map((clientFile) =>
-    path.dirname(clientFile)
-  );
+  const foldersContainsClientFiles = clientFiles.map((clientFile) => path.dirname(clientFile));
   const targetMainFiles = mainFiles.filter((mainFile) => {
     const mainFileDir = path.dirname(mainFile);
     return !foldersContainsClientFiles.some((clientFileDir) => {

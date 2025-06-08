@@ -3072,6 +3072,9 @@ importers:
       typescript:
         specifier: ~5.8.2
         version: 5.8.3
+      yaml:
+        specifier: ~2.7.0
+        version: 2.7.1
 
   packages/typespec-client-generator-core:
     dependencies:

@@ -1,4 +1,5 @@
 import { stat } from "fs/promises";
+import { parseDocument } from "yaml";
 
 export async function isFile(path: string) {
   try {
@@ -30,4 +31,12 @@ export function normalizeSlashes(path: string): string {
   }
   backslashRegExp.lastIndex = index; // prime regex with known position
   return path.replace(backslashRegExp, directorySeparator);
+}
+
+export function tryParseYaml(str: string): any | undefined {
+  try {
+    return parseDocument(str);
+  } catch {
+    return undefined;
+  }
 }
