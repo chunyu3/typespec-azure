@@ -86,6 +86,7 @@ export default {
     "@azure-tools/typespec-azure-resource-manager/resource-name": true,
     "@azure-tools/typespec-azure-resource-manager/retry-after": true,
     "@azure-tools/typespec-azure-resource-manager/unsupported-type": true,
+    "@azure-tools/typespec-azure-core/invalid-paging-result-schema": true,
 
     // TCGC rules
     "@azure-tools/typespec-client-generator-core/require-client-suffix": true,
