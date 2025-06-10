@@ -1,15 +1,16 @@
+import { readFile } from "fs/promises";
+import path, { dirname } from "path";
 import * as vscode from "vscode";
+import { parseDocument } from "yaml";
+import { getRegisterEmitter } from "./src/emitter.js";
+
 export interface IEmitCodeParameters {
   kind?: string;
   language?: string;
   entrypoint?: string;
-  emtter?: string;
-  currentStep?: string;
-  status?: string;
   outputdir?: string;
 }
 
-let returnValid = false;
 export interface IEmitCodeOutputSchema {
   status: "in-progress" | "cancelled" | "success" | "failed";
   message: string;
@@ -22,19 +23,7 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
   ) {
     vscode.window.showInformationMessage("GenerateCode invoked!");
     const params = options.input;
-    // const result = await executeCommandInTerminal(
-    //   "npm install @typespec/http-server-csharp; tsp compile ./main.tsp --emit @typespec/http-server-csharp",
-    // );
-    // if (result.exitCode === 0) {
-    //   vscode.window.showInformationMessage("Generate server code... succeed.");
-    // } else {
-    //   vscode.window.showErrorMessage("Generate server code... Failed.");
-    // }
-    // return new vscode.LanguageModelToolResult([
-    //   new vscode.LanguageModelTextPart(
-    //     `Generated web service server code with emitter @typespec/http-server-csharp`,
-    //   ),
-    // ]);
+
     if (!params.kind) {
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(
@@ -66,67 +55,38 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
       ]);
     }
 
-    // const validate = false;
-    // if (!(await validateTspConfig("tspconfig.yaml"))) {
-    //   return new vscode.LanguageModelToolResult([
-    //     new vscode.LanguageModelTextPart(
-    //       `Invalid tspconfig.yaml, Missing package-dir option for @typespec/http-client-csharp. please modify tspconfig.yaml. `,
-    //     ),
-    //   ]);
-    // }
-    // return new vscode.LanguageModelToolResult([
-    //   new vscode.LanguageModelPromptTsxPart({
-    //     status: "in-progress",
-    //     message: "tspconfig.yaml is valid.",
-    //     nextStep: "install necessary liabrary.",
-    //   }),
-    // ]);
-    if (!params.status) {
-      return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(
-          "Use emitter @typespec/http-client-csharp to emit .NET client code.",
-        ),
-        new vscode.LanguageModelTextPart(
-          "Use emitter @typespec/http-client-csharp to emit .NET client code.",
-        ),
-        // new vscode.LanguageModelTextPart(
-        //   "please display following steps in the chat as information and execute following steps one by one. \
-        //   step 1: execute command `npm install @typespec/http-client-csharp` to install necessary library. \
-        //   step 2: run command `tsp compile ./ --emit @typespec/http-client-csharp` \
-        //   stpe 3: completed. show result. \
-        //   ",
-        // ),
-        new vscode.LanguageModelTextPart(
-          "Please execute the following steps sequentially to emit code using TypeSpec. \
-          Important: Do not modify any command. If any step fails, the entire process should be considered failed.",
-        ),
-        new vscode.LanguageModelTextPart(
-          "step 1: ask user to select azure sdk repo root directory.",
-        ),
-        new vscode.LanguageModelTextPart("step 2: verify the typespec project."),
-        new vscode.LanguageModelTextPart(
-          "step 3: install the requied libary. Run  `npm install @azure-tools/typespec-csharp`",
-        ),
-        new vscode.LanguageModelTextPart(
-          "step 4: emit the code. Run `tsp compile ./ --emit @azure-tools/typespec-csharp` --option @azure-tools/typespec-csharp.emitter-output-dir=d:/project/azure-sdk-for-net/sdk/demoproject/Azure.Contoso",
-        ),
-        new vscode.LanguageModelTextPart(
-          "stpe 5: Report the result. If all steps succeed, display a message indicating success and show the output.",
-        ),
-        new vscode.LanguageModelTextPart(
-          "Emit code succeed. You can compile the generated code and  onboard it.",
-        ),
-      ]);
-    }
-    if (params.status && params.status !== "in-progress") {
-      return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart("emit code completed."),
-      ]);
-    }
-
+    /* retun emit code plan. */
+    const emitterPackage = getRegisterEmitter(params.language, params.kind)?.package;
+    const tspConfigFile = path.join(dirname(params.entrypoint), "tspconfig.yam");
+    const emitterOutputDir = resolveEmitterOutputDir(
+      tspConfigFile,
+      emitterPackage!,
+      params.outputdir,
+    );
+    const command = `tsp compile ./ --emit ${emitterPackage} --option ${emitterPackage}.emitter-output-dir=${emitterOutputDir}`;
     return new vscode.LanguageModelToolResult([
-      new vscode.LanguageModelTextPart("status: in-progress"),
-      new vscode.LanguageModelTextPart("next step: install necessary library."),
+      new vscode.LanguageModelTextPart(
+        "Use emitter @typespec/http-client-csharp to emit .NET client code.",
+      ),
+      new vscode.LanguageModelTextPart(
+        "Use emitter @typespec/http-client-csharp to emit .NET client code.",
+      ),
+      new vscode.LanguageModelTextPart(
+        "Please execute the following steps sequentially to emit code using TypeSpec. \
+          Important: Do not modify any command. If any step fails, the entire process should be considered failed.",
+      ),
+      new vscode.LanguageModelTextPart("step 1: ask user to select azure sdk repo root directory."),
+      new vscode.LanguageModelTextPart("step 2: verify the typespec project."),
+      new vscode.LanguageModelTextPart(
+        `step 3: install the requied libary. Run  "${emitterPackage}"`,
+      ),
+      new vscode.LanguageModelTextPart(`step 4: emit the code. Run "${command}"`),
+      new vscode.LanguageModelTextPart(
+        "stpe 5: Report the result. If all steps succeed, display a message indicating success and show the output.",
+      ),
+      new vscode.LanguageModelTextPart(
+        "Emit code succeed. You can compile the generated code and  onboard it.",
+      ),
     ]);
   }
 
@@ -146,6 +106,52 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
   }
 }
 
+export function tryParseYaml(str: string): any | undefined {
+  try {
+    return parseDocument(str);
+  } catch {
+    return undefined;
+  }
+}
+async function resolveEmitterOutputDir(
+  configFile: string,
+  emitter: string,
+  outputDir?: string,
+): Promise<string> {
+  let data;
+  try {
+    data = await readFile(configFile, "utf8");
+  } catch (err) {
+    throw new Error(`Could not read tspconfig.yaml at ${configFile}. Error: ${err}`);
+  }
+  if (!data) {
+    throw new Error(`tspconfig.yaml is empty at ${configFile}`);
+  }
+  const configYaml = tryParseYaml(data);
+  if (!configYaml) {
+    throw new Error(`tspconfig.yaml is not valid at ${configFile}`);
+  }
+
+  const serviceDir =
+    configYaml.getIn(["options", emitter, "service-dir"]) ??
+    configYaml.getIn(["parameters", "service-dir", "default"]);
+
+  if (!serviceDir) {
+    throw new Error(
+      `Parameter service-dir is not defined correctly in tspconfig.yaml. Please refer to https://github.com/Azure/azure-rest-api-specs/blob/main/specification/contosowidgetmanager/Contoso.WidgetManager/tspconfig.yaml for the right schema.`,
+    );
+  }
+
+  const packageDir: string | undefined = configYaml.getIn(["options", emitter, "package-dir"]);
+  if (!packageDir) {
+    throw new Error(
+      `Missing package-dir in ${emitter} options of tspconfig.yaml. Please refer to https://github.com/Azure/azure-rest-api-specs/blob/main/specification/contosowidgetmanager/Contoso.WidgetManager/tspconfig.yaml for the right schema.`,
+    );
+  }
+  const newPackageDir = path.join(outputDir ?? "{output-dir}", serviceDir, packageDir);
+  return newPackageDir;
+}
+
 export interface IValidateTypeSpecProject {
   tspProject: string;
 }
@@ -156,7 +162,7 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
   ) {
     vscode.window.showInformationMessage("verifyTspProject invoked!");
     const params = options.input;
-    const isValid = await validateTspConfig(params.tspProject);
+    const { isValid, errors } = await validateTspConfig(params.tspProject);
     if (!isValid) {
       const Edit_File_Tool = "copilot_insertEdit";
       const invokeOptions: vscode.LanguageModelToolInvocationOptions<any> = {
@@ -169,29 +175,9 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
       };
       await vscode.lm.invokeTool(Edit_File_Tool, invokeOptions, _token);
     }
-    // if (isValid) {
-    //   return new vscode.LanguageModelToolResult([
-    //     new vscode.LanguageModelTextPart("The tspProject is valid."),
-    //     // new vscode.LanguageModelTextPart(
-    //     //   "Please edit the tspconfig.yaml file to include the package-dir option for the @typespec/http-client-csharp emitter.",
-    //     // ),
-    //   ]);
-    // } else {
-    //   return new vscode.LanguageModelToolResult([
-    //     new vscode.LanguageModelTextPart(
-    //       "Invalid tspconfig.yaml, Missing package-dir option for @typespec/http-client-csharp. please modify tspconfig.yaml.",
-    //     ),
-    //     new vscode.LanguageModelTextPart(
-    //       "Please edit the tspconfig.yaml file to include the package-dir option for the @typespec/http-client-csharp emitter.",
-    //     ),
-    //     new vscode.LanguageModelTextPart("verify the typespec project again. "),
-    //   ]);
-    // }
+
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart("The tspProject is valid."),
-      // new vscode.LanguageModelTextPart(
-      //   "Please edit the tspconfig.yaml file to include the package-dir option for the @typespec/http-client-csharp emitter.",
-      // ),
     ]);
   }
 
@@ -212,8 +198,14 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
     };
   }
 }
-async function validateTspConfig(tspProjectPath: string): Promise<boolean> {
-  return false;
+async function validateTspConfig(
+  tspProjectPath: string,
+): Promise<{ isValid: boolean; errors?: string[] }> {
+  /*TODO: call tsv to validate the tspconfig. */
+  return {
+    isValid: false,
+    errors: [""],
+  };
 }
 export function registerEmitCodeTools(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.lm.registerTool("emit-code-from-typespec", new EmitCode()));
