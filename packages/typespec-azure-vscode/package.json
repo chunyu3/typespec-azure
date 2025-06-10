@@ -66,11 +66,16 @@
             "entrypoint": {
               "type": "string",
               "description": "The entrypoint file, it is a main.tsp or client.tsp"
+            },
+            "outputdir": {
+              "type": "string",
+              "description": "The sdk repo root path, e.g. d:/azure-sdk-for-net"
             }
           },
           "required": [
             "kind",
-            "language"
+            "language",
+            "outputdir"
           ]
         }
       },
