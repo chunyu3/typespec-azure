@@ -25,6 +25,78 @@
   "preview": true,
   "private": true,
   "type": "module",
+  "contributes": {
+    "languageModelTools": [
+      {
+        "name": "create-typespec-project",
+        "tags": [
+          "editors",
+          "create-typespec-project"
+        ],
+        "toolReferenceName": "createTypespecProject",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "This tool is designed to create a typespec project to define web service specification.",
+        "displayName": "create typespec project",
+        "modelDescription": "create a typespec project to define web service specification",
+        "icon": "$(files)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "emit-code-from-typespec",
+        "toolReferenceName": "emitCodeFromTypeSpec",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "This tool is designed to emit code from typespec.",
+        "displayName": "Emit code from typespec.",
+        "modelDescription": "Generate different kinds of code from typespec for a lanaguge, the code kind can be client code, server code, openai document, and the target languge can be .NET, python, java, go, javascript, openapi and so on.",
+        "icon": "$(files)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "description": "The code type, it can be client code, server code, openapi"
+            },
+            "language": {
+              "type": "string",
+              "description": "The target lanaguge, it can be .NET, python, java, go, openapi"
+            },
+            "entrypoint": {
+              "type": "string",
+              "description": "The entrypoint file, it is a main.tsp or client.tsp"
+            }
+          },
+          "required": [
+            "kind",
+            "language"
+          ]
+        }
+      },
+      {
+        "name": "verify-tsp-project",
+        "toolReferenceName": "verifyTspProject",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "This tool is designed to verify the tsp project.",
+        "displayName": "Verify typespec Project.",
+        "modelDescription": "verify the typespec project.",
+        "icon": "$(files)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tspProject": {
+              "type": "string",
+              "description": "The path to a typespec project. a typspec project which is to use typespec lanuaget to define an web service api specification."
+            }
+          },
+          "required": [
+            "tspProject"
+          ]
+        }
+      }
+    ]
+  },
   "scripts": {
     "compile": "pnpm check-types && tsx ./scripts/build.ts",
     "check-types": "tsc --noEmit",
