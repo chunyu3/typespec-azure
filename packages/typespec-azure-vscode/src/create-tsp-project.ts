@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { checkInstalledExecutable } from "./utils.js";
 export class CreateTypeSpecProject implements vscode.LanguageModelTool<void> {
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<void>,
@@ -6,27 +7,38 @@ export class CreateTypeSpecProject implements vscode.LanguageModelTool<void> {
   ) {
     vscode.window.showInformationMessage("CreateTypeSpecProject invoked!");
     const params = options.input;
-    // return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`Create Web service with emitter @typespec/http-client-csharp`)]);
     const toolResults: Array<vscode.LanguageModelTextPart | vscode.LanguageModelPromptTsxPart> = [];
-    toolResults.push(new vscode.LanguageModelTextPart("Following are the steps to emit a code:"));
-    toolResults.push(
-      new vscode.LanguageModelTextPart("step 1: Run command `npm install -g @typespec/compiler`"),
-    );
     toolResults.push(
       new vscode.LanguageModelTextPart(
-        "step 2: Run command `tsp init https://aka.ms/typespec/azure-init`",
+        "Please execute the following steps sequentially to create a typespec project. \
+              Important: Do not modify any command. If any step fails, the entire process should be considered failed.",
       ),
     );
-    toolResults.push(new vscode.LanguageModelTextPart("stpe 3: completed. show result."));
+    let step: number = 1;
+    /* verify tsp cli */
+    const executable = process.platform === "win32" ? "tsp.cmd" : "tsp";
+    const executableExists = await checkInstalledExecutable(executable);
+    if (!executableExists) {
+      toolResults.push(
+        new vscode.LanguageModelTextPart(
+          `step ${step}: Run command "npm install -g @typespec/compiler"`,
+        ),
+      );
+      step++;
+    }
     toolResults.push(
       new vscode.LanguageModelTextPart(
-        "guide to execute above steps one by one. And just run the command mentioned in the step, DoNot change the command. When any error occur in each step, the whole emit code will fail.",
+        `step ${step}: Run command "tsp init https://aka.ms/typespec/azure-init"`,
+      ),
+    );
+    step++;
+    toolResults.push(
+      new vscode.LanguageModelTextPart(
+        `step ${step}: Report the result. If all steps succeed, display a message indicating success and show the output.`,
       ),
     );
 
     return new vscode.LanguageModelToolResult(toolResults);
-    // return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`Run the command 'tsp init' in the terminal to initialize a new typespec project.`),
-    // ]);
   }
 
   async prepareInvocation(

@@ -48,16 +48,16 @@
         "name": "emit-code-from-typespec",
         "toolReferenceName": "emitCodeFromTypeSpec",
         "canBeReferencedInPrompt": true,
-        "userDescription": "This tool is designed to emit code from typespec.",
+        "userDescription": "This tool is designed to emit or generate various types of code artifacts for a specified target language. e.g. .NET azure sdk",
         "displayName": "Emit code from typespec.",
-        "modelDescription": "Generate different kinds of code from typespec for a lanaguge, the code kind can be client code, server code, openai document, and the target languge can be .NET, python, java, go, javascript, openapi and so on.",
+        "modelDescription": "Generates various types of code artifacts from a TypeSpec file for a specified target language. This tool supports generating client libraries, server stubs, OpenAPI specifications, and AI-related documentation. Supported target languages include .NET, Python, Java, Go, JavaScript, and others. It is designed to streamline multi-language code generation workflows from a unified TypeSpec definition. ",
         "icon": "$(files)",
         "inputSchema": {
           "type": "object",
           "properties": {
             "kind": {
               "type": "string",
-              "description": "The code type, it can be client code, server code, openapi"
+              "description": "The code type, it can be client, server, openapi"
             },
             "language": {
               "type": "string",
@@ -114,8 +114,10 @@
   "devDependencies": {
     "@types/vscode": "~1.100.0",
     "@types/node": "~22.13.11",
+    "@types/which": "^3.0.4",
     "@vscode/vsce": "~3.3.0",
     "esbuild": "^0.25.1",
+    "which": "^5.0.0",
     "typescript": "~5.8.2",
     "yaml": "~2.7.0"
   }

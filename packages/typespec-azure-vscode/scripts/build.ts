@@ -10,7 +10,7 @@ const nodeContext = await context({
   target: "node22",
   format: "esm",
   sourcemap: true,
-  external: ["vscode", "yaml"],
+  external: ["vscode", "yaml", "which"],
 });
 
 if (process.argv.includes("--watch")) {

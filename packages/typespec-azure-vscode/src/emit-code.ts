@@ -55,8 +55,15 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
 
     /* return emit code plan. */
     const emitterPackage = getRegisterEmitter(params.language, params.kind)?.package;
+    if (!emitterPackage) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(
+          `Cannot find available code generator to generate the code`,
+        ),
+      ]);
+    }
     const tspConfigFile = path.join(dirname(params.entrypoint), "tspconfig.yam");
-    const emitterOutputDir = resolveEmitterOutputDir(
+    const emitterOutputDir = await resolveEmitterOutputDir(
       tspConfigFile,
       emitterPackage!,
       params.outputdir,

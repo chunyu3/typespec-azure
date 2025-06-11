@@ -3072,6 +3072,9 @@ importers:
       '@types/vscode':
         specifier: ~1.100.0
         version: 1.100.0
+      '@types/which':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@vscode/vsce':
         specifier: ~3.3.0
         version: 3.3.2
@@ -3081,6 +3084,9 @@ importers:
       typescript:
         specifier: ~5.8.2
         version: 5.8.3
+      which:
+        specifier: ^5.0.0
+        version: 5.0.0
       yaml:
         specifier: ~2.7.0
         version: 2.7.1
