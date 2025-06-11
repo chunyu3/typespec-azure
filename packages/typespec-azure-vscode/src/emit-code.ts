@@ -158,13 +158,11 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
     vscode.window.showInformationMessage("verifyTspProject invoked!");
     const params = options.input;
     const { isValid, errors } = await validateTspConfig(params.tspProject);
-
-    if (!isValid) {
-      const tools = vscode.lm.tools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-      }));
-      const Edit_File_Tool = "copilot_insertEdit";
+    const Edit_File_Tool = "copilot_insertEdit";
+    const isEditToolInstalled =
+      vscode.lm.tools.filter((tool) => tool.name === Edit_File_Tool).length > 0;
+    if (!isValid && isEditToolInstalled) {
+      /*TODO: convert errors to code changes and add it into explanation. */
       const invokeOptions: vscode.LanguageModelToolInvocationOptions<any> = {
         input: {
           explanation: "add package_dir option under @azure-tools/typespec-csharp",
