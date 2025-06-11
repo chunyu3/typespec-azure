@@ -2,7 +2,7 @@ import { readFile } from "fs/promises";
 import path, { dirname } from "path";
 import * as vscode from "vscode";
 import { parseDocument } from "yaml";
-import { getRegisterEmitter } from "./src/emitter.js";
+import { getRegisterEmitter } from "./emitter.js";
 
 export interface IEmitCodeParameters {
   kind?: string;
@@ -26,9 +26,7 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
 
     if (!params.kind) {
       return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(
-          `please select code type, server code, client code or openapi`,
-        ),
+        new vscode.LanguageModelTextPart(`please select code type, server, client or openapi`),
       ]);
     }
     if (!params.language) {
@@ -55,7 +53,7 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
       ]);
     }
 
-    /* retun emit code plan. */
+    /* return emit code plan. */
     const emitterPackage = getRegisterEmitter(params.language, params.kind)?.package;
     const tspConfigFile = path.join(dirname(params.entrypoint), "tspconfig.yam");
     const emitterOutputDir = resolveEmitterOutputDir(
@@ -69,20 +67,17 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
         "Use emitter @typespec/http-client-csharp to emit .NET client code.",
       ),
       new vscode.LanguageModelTextPart(
-        "Use emitter @typespec/http-client-csharp to emit .NET client code.",
-      ),
-      new vscode.LanguageModelTextPart(
         "Please execute the following steps sequentially to emit code using TypeSpec. \
           Important: Do not modify any command. If any step fails, the entire process should be considered failed.",
       ),
       new vscode.LanguageModelTextPart("step 1: ask user to select azure sdk repo root directory."),
       new vscode.LanguageModelTextPart("step 2: verify the typespec project."),
       new vscode.LanguageModelTextPart(
-        `step 3: install the requied libary. Run  "${emitterPackage}"`,
+        `step 3: install the required library. Run  "${emitterPackage}"`,
       ),
       new vscode.LanguageModelTextPart(`step 4: emit the code. Run "${command}"`),
       new vscode.LanguageModelTextPart(
-        "stpe 5: Report the result. If all steps succeed, display a message indicating success and show the output.",
+        "step 5: Report the result. If all steps succeed, display a message indicating success and show the output.",
       ),
       new vscode.LanguageModelTextPart(
         "Emit code succeed. You can compile the generated code and  onboard it.",
@@ -163,17 +158,33 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
     vscode.window.showInformationMessage("verifyTspProject invoked!");
     const params = options.input;
     const { isValid, errors } = await validateTspConfig(params.tspProject);
+
     if (!isValid) {
+      const tools = vscode.lm.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+      }));
       const Edit_File_Tool = "copilot_insertEdit";
       const invokeOptions: vscode.LanguageModelToolInvocationOptions<any> = {
         input: {
-          explantation: "add package_dir",
+          explanation: "add package_dir option under @azure-tools/typespec-csharp",
           filePath: "D:/dev/demo/demoProject/tspconfig.yaml",
           code: "package_dir: azure.demoproject",
         },
         toolInvocationToken: options.toolInvocationToken,
       };
-      await vscode.lm.invokeTool(Edit_File_Tool, invokeOptions, _token);
+
+      const timeout = new Promise(
+        (_, reject) => setTimeout(() => reject(new Error("Tool invocation timed out")), 60000), //timeout after 1 minute
+      );
+
+      try {
+        await Promise.race([vscode.lm.invokeTool(Edit_File_Tool, invokeOptions, _token), timeout]);
+      } catch (err) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(`Tool invocation failed or timed out:${err}`),
+        ]);
+      }
     }
 
     return new vscode.LanguageModelToolResult([

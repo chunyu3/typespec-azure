@@ -8,30 +8,6 @@ export class CreateTypeSpecProject implements vscode.LanguageModelTool<void> {
     const params = options.input;
     // return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`Create Web service with emitter @typespec/http-client-csharp`)]);
     const toolResults: Array<vscode.LanguageModelTextPart | vscode.LanguageModelPromptTsxPart> = [];
-    // const hasSpecification =
-    //   (await vscode.workspace.findFiles("**/*.tsp", "**/node_modules/**")).length > 0;
-    // if (!hasSpecification) {
-    //   // let terminal = vscode.window.activeTerminal;
-    //   // if (!terminal) {
-    //   //     terminal = vscode.window.createTerminal('node');
-    //   // }
-    //   // terminal.show();
-    //   // terminal.sendText('tsp init');
-    //   // vscode.window.onDidEndTerminalShellExecution
-    //   const result = await executeCommandInTerminal("tsp init");
-    //   if (result.exitCode === 0) {
-    //     vscode.window.showInformationMessage("typespec project created successfully.");
-    //   } else {
-    //     vscode.window.showErrorMessage("Created typespec project... Failed.");
-    //   }
-    //   toolResults.push(
-    //     new vscode.LanguageModelTextPart(`Created a typespec project by 'tsp init'`),
-    //   );
-    // } else {
-    //   toolResults.push(
-    //     new vscode.LanguageModelTextPart("There exists a typespec project already."),
-    //   );
-    // }
     toolResults.push(new vscode.LanguageModelTextPart("Following are the steps to emit a code:"));
     toolResults.push(
       new vscode.LanguageModelTextPart("step 1: Run command `npm install -g @typespec/compiler`"),
