@@ -2,13 +2,15 @@ import { readFile } from "fs/promises";
 import path, { dirname } from "path";
 import * as vscode from "vscode";
 import { parseDocument } from "yaml";
+import { TspConfigFileName } from "./constant.js";
 import { getRegisterEmitter } from "./emitter.js";
+import { getEntrypointTspFile, TraverseMainTspFileInWorkspace } from "./utils.js";
 
 export interface IEmitCodeParameters {
   kind?: string;
   language?: string;
   entrypoint?: string;
-  outputdir?: string;
+  sdkRepoRoot?: string;
 }
 
 export interface IEmitCodeOutputSchema {
@@ -37,18 +39,25 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
       ]);
     }
 
-    if (!params.entrypoint) {
-      return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(`please select the entry point file:`),
-        new vscode.LanguageModelTextPart("main.tsp"),
-        new vscode.LanguageModelTextPart("client.tsp"),
-      ]);
+    /* get entrypoint tsp file. */
+    const targetTspFiles = await getEntrypointTspFiles(params.entrypoint);
+    if (targetTspFiles && targetTspFiles.length === 1) {
+      params.entrypoint = targetTspFiles[0];
+    } else {
+      const results: Array<vscode.LanguageModelTextPart | vscode.LanguageModelPromptTsxPart> = [];
+      results.push(new vscode.LanguageModelTextPart(`please select the entry point file.`));
+      if (targetTspFiles && targetTspFiles.length > 1) {
+        for (const tsp of targetTspFiles) {
+          results.push(new vscode.LanguageModelTextPart(tsp));
+        }
+      }
+      return new vscode.LanguageModelToolResult(results);
     }
 
-    if (!params.outputdir) {
+    if (!params.sdkRepoRoot) {
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(
-          `please give the output directory, it should be the root directory of one azure sdk repo e.g. d:/azure-sdk-for-net`,
+          `please provide the root directory of one azure sdk repo e.g. d:/azure-sdk-for-net`,
         ),
       ]);
     }
@@ -62,11 +71,11 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
         ),
       ]);
     }
-    const tspConfigFile = path.join(dirname(params.entrypoint), "tspconfig.yam");
+    const tspConfigFile = path.join(dirname(params.entrypoint), TspConfigFileName);
     const emitterOutputDir = await resolveEmitterOutputDir(
       tspConfigFile,
       emitterPackage!,
-      params.outputdir,
+      params.sdkRepoRoot,
     );
     const command = `tsp compile ./ --emit ${emitterPackage} --option ${emitterPackage}.emitter-output-dir=${emitterOutputDir}`;
     return new vscode.LanguageModelToolResult([
@@ -85,9 +94,6 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
       new vscode.LanguageModelTextPart(`step 4: emit the code. Run "${command}"`),
       new vscode.LanguageModelTextPart(
         "step 5: Report the result. If all steps succeed, display a message indicating success and show the output.",
-      ),
-      new vscode.LanguageModelTextPart(
-        "Emit code succeed. You can compile the generated code and  onboard it.",
       ),
     ]);
   }
@@ -152,6 +158,25 @@ async function resolveEmitterOutputDir(
   }
   const newPackageDir = path.join(outputDir ?? "{output-dir}", serviceDir, packageDir);
   return newPackageDir;
+}
+
+async function getEntrypointTspFiles(tspFilePath?: string): Promise<string[] | undefined> {
+  if (!tspFilePath) {
+    return await TraverseMainTspFileInWorkspace();
+  } else {
+    const isAbsolutePath = path.isAbsolute(tspFilePath);
+    if (isAbsolutePath) {
+      const entrypointFile = await getEntrypointTspFile(tspFilePath);
+      if (entrypointFile) {
+        return [entrypointFile];
+      } else {
+        return undefined;
+      }
+    } else {
+      // invalid path, traverse in the workspace.
+      return getEntrypointTspFiles();
+    }
+  }
 }
 
 export interface IValidateTypeSpecProject {
