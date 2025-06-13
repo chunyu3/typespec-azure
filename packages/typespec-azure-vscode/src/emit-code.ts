@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path, { dirname } from "path";
 import * as vscode from "vscode";
-import { parseDocument } from "yaml";
+import { isScalar, isSeq, parseDocument } from "yaml";
 import { TspConfigFileName } from "./constant.js";
 import { getRegisterEmitter } from "./emitter.js";
 import { getEntrypointTspFile, TraverseMainTspFileInWorkspace } from "./utils.js";
@@ -190,17 +190,30 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
     vscode.window.showInformationMessage("verifyTspProject invoked!");
     const params = options.input;
     const tspConfigFile = path.join(params.tspProject, TspConfigFileName);
-    const { isValid, errors } = await validateTspConfig(params.tspProject);
+    const { isValid, errors } = await validateTspConfig(tspConfigFile);
     const Edit_File_Tool = "copilot_insertEdit";
     const isEditToolInstalled =
       vscode.lm.tools.filter((tool) => tool.name === Edit_File_Tool).length > 0;
     if (!isValid && isEditToolInstalled) {
       /*TODO: convert errors to code changes and add it into explanation. */
+      const codesToChange = [];
+      if (errors) {
+        /* TODO: need to append the correct value to the codeChange. */
+        for (const err of errors) {
+          if (err.code === "missing") {
+            codesToChange.push(`add ${err.option}`);
+          }
+          if (err.code === "invalid") {
+            codesToChange.push(`update ${err.option}`);
+          }
+        }
+      }
+
       const invokeOptions: vscode.LanguageModelToolInvocationOptions<any> = {
         input: {
           explanation: "add package_dir option under @azure-tools/typespec-csharp",
           filePath: tspConfigFile,
-          code: "package_dir: azure.demoproject",
+          code: codesToChange.join(";"),
         },
         toolInvocationToken: options.toolInvocationToken,
       };
@@ -240,13 +253,69 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
     };
   }
 }
+
+interface TspConfigError {
+  code: "missing" | "invalid";
+  option: string;
+}
 async function validateTspConfig(
-  tspProjectPath: string,
-): Promise<{ isValid: boolean; errors?: string[] }> {
+  tspConfigFile: string,
+): Promise<{ isValid: boolean; errors?: TspConfigError[] }> {
   /*TODO: call tsv to validate the tspconfig. */
+  let isValid: boolean = true;
+  const errors: TspConfigError[] = [];
+  let data;
+  try {
+    data = await readFile(tspConfigFile, "utf8");
+  } catch (err) {
+    throw new Error(`Could not read tspconfig.yaml at ${tspConfigFile}. Error: ${err}`);
+  }
+  if (!data) {
+    throw new Error(`tspconfig.yaml is empty at ${tspConfigFile}`);
+  }
+  const configYaml = tryParseYaml(data);
+  if (!configYaml) {
+    throw new Error(`tspconfig.yaml is not valid at ${tspConfigFile}`);
+  }
+
+  const serviceDir = configYaml.getIn(["parameters", "service-dir", "default"]);
+
+  if (!serviceDir) {
+    isValid = false;
+    errors.push({
+      code: "missing",
+      option: "parameters.service-dir.default",
+    });
+  }
+
+  let existingOptions: string[] = [];
+  const optionsNode = configYaml.get("options");
+  if (optionsNode) {
+    if (isSeq(optionsNode)) {
+      if (Array.isArray(optionsNode.items)) {
+        existingOptions = optionsNode.items.map((item) => {
+          if (isScalar(item)) {
+            return item.value as string;
+          }
+          return "";
+        });
+      }
+    }
+  }
+  for (const option of existingOptions) {
+    const packageDir: string | undefined = configYaml.getIn(["options", option, "package-dir"]);
+    if (!packageDir) {
+      isValid = false;
+      errors.push({
+        code: "missing",
+        option: `${option}.package-dir`,
+      });
+    }
+  }
+
   return {
-    isValid: false,
-    errors: [""],
+    isValid: isValid,
+    errors: errors,
   };
 }
 export function registerEmitCodeTools(context: vscode.ExtensionContext) {
