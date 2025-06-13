@@ -7,10 +7,10 @@ import { getRegisterEmitter } from "./emitter.js";
 import { getEntrypointTspFile, TraverseMainTspFileInWorkspace } from "./utils.js";
 
 export interface IEmitCodeParameters {
-  kind?: string;
-  language?: string;
+  kind: string;
+  language: string;
   entrypoint?: string;
-  sdkRepoRoot?: string;
+  sdkRepoRoot: string;
 }
 
 export interface IEmitCodeOutputSchema {

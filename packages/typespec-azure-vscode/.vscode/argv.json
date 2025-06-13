@@ -1,0 +1,3 @@
+{
+    "enable-proposed-api": ["typespec.typespec-azure-vscode"]
+}

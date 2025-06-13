@@ -10,6 +10,30 @@ export async function activate(context: vscode.ExtensionContext) {
 
   /* register emit code tools. */
   registerEmitCodeTools(context);
+
+  /* register mcp. */
+  /* NOTE: mcpServerDefinitionProvider api is proposed-api, so use code-insiders */
+  context.subscriptions.push(
+    vscode.lm.registerMcpServerDefinitionProvider("azure-sdk-python-mcp", {
+      // onDidChangeMcpServerDefinitions: didChangeEmitter.event,
+      provideMcpServerDefinitions: async () => {
+        const output: vscode.McpServerDefinition[] = [];
+        const mcpServerDefinition = new vscode.McpStdioServerDefinition(
+          "azure sdk python mcp server",
+          "uv",
+          [
+            "--directory",
+            "C:/project/azure-sdk-for-python/tools/mcp/azure-sdk-python-mcp/", //TODO: update to the realpath when python mcp is published
+            "run",
+            "main.py",
+          ],
+        );
+        mcpServerDefinition.cwd = vscode.Uri.file("C:/project/azure-sdk-for-python");
+        output.push(mcpServerDefinition);
+        return output;
+      },
+    }),
+  );
 }
 
 // This method is called when your extension is deactivated
