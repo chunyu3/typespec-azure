@@ -111,20 +111,16 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
     const command = `tsp compile ./ --emit ${emitterPackage} --option ${emitterPackage}.emitter-output-dir=${emitterOutputDir}`;
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(
-        "Use emitter @typespec/http-client-csharp to emit .NET client code.",
-      ),
-      new vscode.LanguageModelTextPart(
         "Please execute the following steps sequentially to emit code using TypeSpec. \
           Important: Do not modify any command. If any step fails, the entire process should be considered failed.",
       ),
-      new vscode.LanguageModelTextPart("step 1: ask user to select azure sdk repo root directory."),
-      new vscode.LanguageModelTextPart("step 2: verify the typespec project."),
+      new vscode.LanguageModelTextPart("step 1: verify the typespec project."),
       new vscode.LanguageModelTextPart(
-        `step 3: install the required library. Run  "${emitterPackage}"`,
+        `step 2: install the required library. Run  "npm install ${emitterPackage}"`,
       ),
-      new vscode.LanguageModelTextPart(`step 4: emit the code. Run "${command}"`),
+      new vscode.LanguageModelTextPart(`step 3: emit the code. Run "${command}"`),
       new vscode.LanguageModelTextPart(
-        "step 5: Report the result. If all steps succeed, display a message indicating success and show the output.",
+        "step 4: Report the result. If all steps succeed, display a message indicating success and show the output.",
       ),
     ]);
   }
