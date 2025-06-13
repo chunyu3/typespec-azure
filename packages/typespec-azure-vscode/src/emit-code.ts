@@ -71,6 +71,37 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
         ),
       ]);
     }
+
+    /* verify and remedy tspconfig.yaml. */
+    const verifyTspProject_tool = "verify-tsp-project";
+    const isEditToolInstalled =
+      vscode.lm.tools.filter((tool) => tool.name === verifyTspProject_tool).length > 0;
+    if (isEditToolInstalled) {
+      /*TODO: convert errors to code changes and add it into explanation. */
+      const invokeOptions: vscode.LanguageModelToolInvocationOptions<any> = {
+        input: {
+          tspProject: dirname(params.entrypoint),
+          emitterToCheck: emitterPackage,
+        },
+        toolInvocationToken: options.toolInvocationToken,
+      };
+
+      const timeout = new Promise(
+        (_, reject) => setTimeout(() => reject(new Error("Tool invocation timed out")), 60000), //timeout after 1 minute
+      );
+
+      try {
+        await Promise.race([
+          vscode.lm.invokeTool(verifyTspProject_tool, invokeOptions, _token),
+          timeout,
+        ]);
+      } catch (err) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(`Tool invocation failed or timed out:${err}`),
+        ]);
+      }
+    }
+
     const tspConfigFile = path.join(dirname(params.entrypoint), TspConfigFileName);
     const emitterOutputDir = await resolveEmitterOutputDir(
       tspConfigFile,
@@ -181,6 +212,7 @@ async function getEntrypointTspFiles(tspFilePath?: string): Promise<string[] | u
 
 export interface IValidateTypeSpecProject {
   tspProject: string;
+  emitterToCheck?: string;
 }
 export class validateTspProject implements vscode.LanguageModelTool<IValidateTypeSpecProject> {
   async invoke(
@@ -190,7 +222,7 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
     vscode.window.showInformationMessage("verifyTspProject invoked!");
     const params = options.input;
     const tspConfigFile = path.join(params.tspProject, TspConfigFileName);
-    const { isValid, errors } = await validateTspConfig(tspConfigFile);
+    const { isValid, errors } = await validateTspConfig(tspConfigFile, params.emitterToCheck);
     const Edit_File_Tool = "copilot_insertEdit";
     const isEditToolInstalled =
       vscode.lm.tools.filter((tool) => tool.name === Edit_File_Tool).length > 0;
@@ -260,6 +292,7 @@ interface TspConfigError {
 }
 async function validateTspConfig(
   tspConfigFile: string,
+  emitterToCheck?: string,
 ): Promise<{ isValid: boolean; errors?: TspConfigError[] }> {
   /*TODO: call tsv to validate the tspconfig. */
   let isValid: boolean = true;
@@ -302,6 +335,17 @@ async function validateTspConfig(
       }
     }
   }
+  if (emitterToCheck) {
+    const hasOptionsForEmitter = existingOptions.find((option) => option === emitterToCheck);
+    if (!hasOptionsForEmitter) {
+      isValid = false;
+      errors.push({
+        code: "missing",
+        option: `${emitterToCheck}.package-dir`,
+      });
+    }
+  }
+
   for (const option of existingOptions) {
     const packageDir: string | undefined = configYaml.getIn(["options", option, "package-dir"]);
     if (!packageDir) {
