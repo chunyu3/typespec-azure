@@ -239,7 +239,7 @@ export class validateTspProject implements vscode.LanguageModelTool<IValidateTyp
 
       const invokeOptions: vscode.LanguageModelToolInvocationOptions<any> = {
         input: {
-          explanation: "add package_dir option under @azure-tools/typespec-csharp",
+          explanation: "update tspconfig.yaml to add or update options",
           filePath: tspConfigFile,
           code: codesToChange.join(";"),
         },

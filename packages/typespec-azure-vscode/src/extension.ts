@@ -23,7 +23,7 @@ export async function activate(context: vscode.ExtensionContext) {
           "uv",
           [
             "--directory",
-            "C:/project/azure-sdk-for-python/tools/mcp/azure-sdk-python-mcp/", //TODO: update to the realpath when python mcp is published
+            "d:/project/azure-sdk-for-python/eng/tools/mcp/azure-sdk-python-mcp/", //TODO: update to the realpath when python mcp is published
             "run",
             "main.py",
           ],
