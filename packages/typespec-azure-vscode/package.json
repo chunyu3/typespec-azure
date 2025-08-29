@@ -75,14 +75,40 @@
             "entrypoint": {
               "type": "string",
               "description": "The entrypoint file, it is a main.tsp or client.tsp"
-            },
-            "sdkRepoRoot": {
-              "type": "string",
-              "description": "The sdk repo root path, e.g. d:/azure-sdk-for-net"
             }
           },
           "required": [
             "kind",
+            "language"
+          ]
+        }
+      },
+      {
+        "name": "tsp-compile-code",
+        "toolReferenceName": "tspCompileCode",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "This tool is designed to compile typespec project",
+        "displayName": "compile typespec.",
+        "modelDescription": "compile typespec project ",
+        "icon": "$(files)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "type": "string",
+              "description": "The target lanaguge, it can be .NET, python, java, go, openapi"
+            },
+            "tspProject": {
+              "type": "string",
+              "description": "The path to a typespec project. a typspec project which is to use typespec lanuaget to define an web service api specification."
+            },
+            "sdkRepoRoot": {
+              "type": "string",
+              "description": "The sdk repository root path. e.g. d:/azure-sdk-for-net"
+            }
+          },
+          "required": [
+            "tspconfig",
             "language",
             "sdkRepoRoot"
           ]

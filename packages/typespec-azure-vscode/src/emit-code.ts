@@ -5,6 +5,7 @@ import { isScalar, isSeq, parseDocument } from "yaml";
 import { TspConfigFileName } from "./constant.js";
 import { getRegisterEmitter } from "./emitter.js";
 import { getEntrypointTspFile, TraverseMainTspFileInWorkspace } from "./utils.js";
+import { LlmToolName } from "./type.js";
 
 export interface IEmitCodeParameters {
   kind: string;
@@ -54,13 +55,13 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
       return new vscode.LanguageModelToolResult(results);
     }
 
-    if (!params.sdkRepoRoot) {
-      return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(
-          `please provide the root directory of one azure sdk repo e.g. d:/azure-sdk-for-net`,
-        ),
-      ]);
-    }
+    // if (!params.sdkRepoRoot) {
+    //   return new vscode.LanguageModelToolResult([
+    //     new vscode.LanguageModelTextPart(
+    //       `please provide the root directory of one azure sdk repo e.g. d:/azure-sdk-for-net`,
+    //     ),
+    //   ]);
+    // }
 
     /* return emit code plan. */
     const emitterPackage = getRegisterEmitter(params.language, params.kind)?.package;
@@ -108,19 +109,28 @@ export class EmitCode implements vscode.LanguageModelTool<IEmitCodeParameters> {
       emitterPackage!,
       params.sdkRepoRoot,
     );
+    let step: number = 1;
+    let getSdkRepoStep: number = 3; //TODO: calculate this
     const command = `tsp compile ./ --emit ${emitterPackage} --option ${emitterPackage}.emitter-output-dir=${emitterOutputDir}`;
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(
         "Please execute the following steps sequentially to emit code using TypeSpec. \
           Important: Do not modify any command. If any step fails, the entire process should be considered failed.",
       ),
-      new vscode.LanguageModelTextPart("step 1: verify the typespec project."),
+      new vscode.LanguageModelTextPart(`step ${step++}: verify the typespec project.`),
       new vscode.LanguageModelTextPart(
-        `step 2: install the required library. Run  "npm install ${emitterPackage}"`,
+        `step ${step++}: install the required library. Run  "npm install ${emitterPackage}"`,
       ),
-      new vscode.LanguageModelTextPart(`step 3: emit the code. Run "${command}"`),
       new vscode.LanguageModelTextPart(
-        "step 4: Report the result. If all steps succeed, display a message indicating success and show the output.",
+        `step ${step++}: Figure out the {local SDK repository root folder}\
+        1. Ask user to provide the local root folder of SDK repository 'azure-sdk-for-net' \
+        2. If the user provides the folder, use it as the root folder of the SDK repository.\
+        3. If the user does not provide the folder, work with user to git clone the repository '' to a local folder and use it as the root folder of the SDK repository.`
+      ),
+      // 
+      new vscode.LanguageModelTextPart(`step ${step++}: complie typespec to generate code. MUST call agent tool #${LlmToolName.typespec_compiler_tool} to generate the SDK by following the detail instructions from the tool. The 'sdkRepoRoot' is the local SDK repositry root folder figured out in the step ${getSdkRepoStep} above."`),
+      new vscode.LanguageModelTextPart(
+        `step ${step++}: Report the result. If all steps succeed, display a message indicating success and show the output.`,
       ),
     ]);
   }
@@ -358,9 +368,72 @@ async function validateTspConfig(
     errors: errors,
   };
 }
+
+export interface ICompileProject {
+  tspProject: string;
+  language: string;
+  sdkRepoRoot: string;
+}
+export class compileTspProject implements vscode.LanguageModelTool<ICompileProject> {
+  async invoke(
+    options: vscode.LanguageModelToolInvocationOptions<ICompileProject>,
+    _token: vscode.CancellationToken,
+  ) {
+    vscode.window.showInformationMessage("verifyTspProject invoked!");
+    const params = options.input;
+    /* get entrypoint tsp file. */
+    const targetTspFile = await getEntrypointTspFile(params.tspProject);
+    const tspConfigFile = path.join(params.tspProject, TspConfigFileName);
+    const emitterPackage = getRegisterEmitter(params.language, "client")?.package;
+    if (!emitterPackage) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(
+          `Cannot find available code generator to generate the code`,
+        ),
+      ]);
+    }
+    const emitterOutputDir = await resolveEmitterOutputDir(
+      tspConfigFile,
+      emitterPackage!,
+      params.sdkRepoRoot,
+    );
+    let step: number = 1;
+    let getSdkRepoStep: number = 3; //TODO: calculate this
+    const command = `tsp compile ${targetTspFile} --emit ${emitterPackage} --option ${emitterPackage}.emitter-output-dir=${emitterOutputDir}`;
+    // const terminal = vscode.window.createTerminal({ name: 'My Terminal' });
+    // terminal.show();
+    // terminal.sendText(command, true);
+    vscode.window.activeTerminal?.sendText(command);
+    return new vscode.LanguageModelToolResult([
+      new vscode.LanguageModelTextPart("The tspProject is compiled."),
+    ]);
+  }
+
+  async prepareInvocation(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<ICompileProject>,
+    _token: vscode.CancellationToken,
+  ) {
+    const params = options.input;
+    const confirmationMessages = {
+      title: "compile tsp project.",
+      message: new vscode.MarkdownString(
+        `Compile tsp project ${params.tspProject} ${params.language} client code under ${params.sdkRepoRoot}?`,
+      ),
+    };
+
+    return {
+      invocationMessage: "Verify the tsp project",
+      confirmationMessages,
+    };
+  }
+}
+
 export function registerEmitCodeTools(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.lm.registerTool("emit-code-from-typespec", new EmitCode()));
   context.subscriptions.push(
     vscode.lm.registerTool("verify-tsp-project", new validateTspProject()),
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(LlmToolName.typespec_compiler_tool, new compileTspProject()),
   );
 }
